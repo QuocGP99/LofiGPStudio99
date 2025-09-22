@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Không Gian Âm Nhạc</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevent scrolling on the body */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background-color: #111827; /* Darker bg */
+        }
+        /* Custom scrollbar for playlist */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4A5568;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+        input[type=range] {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 6px; background: #4a5568;
+            border-radius: 9999px; outline: none; transition: opacity 0.2s;
+            cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; background: #f7fafc;
+            cursor: pointer; border-radius: 50%; border: 2px solid #2d3748;
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 18px; height: 18px; background: #f7fafc;
+            cursor: pointer; border-radius: 50%; border: 2px solid #2d3748;
+        }
+        .sound-icon { transition: all 0.3s ease; }
+        .sound-icon.playing { transform: scale(1.1); color: #60A5FA; /* Blue tint when active */ }
+        .volume-slider-wrapper {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out;
+        }
+        .volume-slider-wrapper.active {
+            max-height: 50px;
+        }
+        .progress-container {
+            background: #4a5568; border-radius: 5px; cursor: pointer;
+            padding: 0; display: flex; align-items: center; height: 8px;
+        }
+        .progress-bar {
+            background: #f7fafc; width: 0%; height: 8px; border-radius: 5px;
+            position: relative; transition: width 0.1s linear;
+        }
+        .progress-bar::after {
+            content: ''; position: absolute; right: -8px; top: -4px;
+            width: 16px; height: 16px; background: #f7fafc; border-radius: 50%;
+        }
+        #playlist-ul .active-song {
+            background-color: #2c5282; color: white;
+        }
+        .mixer-btn.active {
+            background-color: #3182CE;
+            color: white;
+        }
+    </style>
+</head>
+<body class="text-gray-200">
+
+    <div class="flex flex-col md:flex-row w-full h-full">
+        <!-- Left Panel: Playlist -->
+        <div class="w-full md:w-1/3 lg:w-1/4 bg-gray-900/50 flex flex-col p-4 md:p-6 space-y-4 border-r border-gray-700/50">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-white">Playlist</h1>
+            </div>
+            <div id="playlist-space" class="flex flex-col flex-grow min-h-0 space-y-4">
+                <div class="flex-shrink-0 bg-gray-800/60 p-4 rounded-xl flex flex-col items-center text-center space-y-3">
+                    <img id="music-cover" src="https://placehold.co/150x150/1f2937/e5e7eb?text=Music" alt="Bìa album" class="w-32 h-32 md:w-40 md:h-40 rounded-lg shadow-lg">
+                    <div>
+                        <h3 id="music-title" class="text-lg font-bold text-white">Chọn một bài hát</h3>
+                        <p id="music-artist" class="text-gray-400 text-sm">Nghệ sĩ</p>
+                    </div>
+                    <div id="progress-container" class="w-full progress-container">
+                        <div id="progress-bar" class="progress-bar"></div>
+                    </div>
+                    <div class="flex w-full justify-between text-xs font-mono text-gray-400">
+                        <span id="current-time">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                    <div class="flex items-center space-x-5">
+                        <button id="shuffle-btn" class="text-gray-400 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                        </button>
+                        <button id="prev-btn" class="text-gray-400 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                        </button>
+                        <button id="play-pause-btn" class="bg-blue-600 w-14 h-14 flex items-center justify-center rounded-full text-white hover:bg-blue-700 transition-colors">
+                            <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" class="hidden"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        </button>
+                        <button id="next-btn" class="text-gray-400 hover:text-white transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                        </button>
+                        <button id="repeat-btn" class="text-gray-400 hover:text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>    
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-grow overflow-y-auto custom-scrollbar bg-gray-800/60 rounded-xl p-2">
+                    <ul id="playlist-ul" class="space-y-1"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Mixer & Timer -->
+        <div class="w-full md:w-2/3 lg:w-3/4 flex-grow flex flex-col p-4 md:p-8">
+            <div class="flex-grow flex flex-col justify-center items-center">
+                <div class="w-full max-w-2xl mx-auto">
+                    <div class="flex bg-gray-800 rounded-lg p-1 mb-6">
+                        <button id="mixer-nature-btn" class="mixer-btn active w-1/2 p-2 rounded-md font-semibold transition-colors text-sm">Âm thanh nền</button>
+                        <button id="mixer-instrument-btn" class="mixer-btn w-1/2 p-2 rounded-md font-semibold transition-colors text-gray-400 text-sm">Nhạc cụ</button>
+                    </div>
+                    <div id="nature-sounds-container" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8 place-items-center"></div>
+                    <div id="instrument-sounds-container" class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-8 place-items-center hidden"></div>
+                </div>
+            </div>
+            
+            <!-- GLOBAL TIMER -->
+            <div class="flex-shrink-0 mt-8">
+                 <div class="bg-gray-800/60 p-4 rounded-xl w-full max-w-sm mx-auto">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-white">Hẹn giờ tắt</h3>
+                        <p id="time-display" class="text-2xl font-mono text-gray-300">--:--</p>
+                    </div>
+                    <div id="timer-controls" class="space-y-3">
+                         <div class="flex items-center space-x-2">
+                            <input id="custom-timer-input" type="number" min="1" placeholder="Nhập số phút..." class="bg-gray-700 text-white w-full text-center rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400">
+                            <button id="start-custom-timer-btn" class="p-2 rounded-lg transition-colors bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button id="timer-off-btn" class="w-full py-2 mt-3 rounded-lg transition-colors bg-red-600 hover:bg-red-700 text-white font-semibold hidden">Hủy hẹn giờ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <audio id="music-player"></audio>
+</body>
+</html>
