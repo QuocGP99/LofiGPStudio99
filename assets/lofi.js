@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async function () {
   const mixerInstrumentBtn = document.getElementById('mixer-instrument-btn');
   const natureSoundsContainer = document.getElementById('nature-sounds-container');
   const instrumentSoundsContainer = document.getElementById('instrument-sounds-container');
+  const tabSlider = document.getElementById('tab-slider'); // NEW: sliding pill
 
   // Timer
   const timeDisplay = document.getElementById('time-display');
@@ -74,17 +75,33 @@ document.addEventListener('DOMContentLoaded', async function () {
   }
 
   /* ============================ MIXER (SOUNDS) ============================= */
+
+  // --- Normalize admin SVGs for consistent sizing ---
+function normalizeSvg(svg) {
+  if (!svg) return '';
+  // remove inline width/height so CSS controls size
+  svg = svg.replace(/\s(width|height)="[^"]*"/g, '');
+  // ensure stroke uses currentColor
+  svg = svg.replace(/stroke="[^"]*"/g, 'stroke="currentColor"');
+  // add viewBox if missing
+  if (!/viewBox="/.test(svg)) {
+    svg = svg.replace('<svg', '<svg viewBox="0 0 24 24"');
+  }
+  return svg;
+}
+
   function createSoundControls(sound, container) {
     const controlDiv = document.createElement('div');
-    controlDiv.className = 'flex flex-col items-center space-y-2 w-24';
+    controlDiv.className = 'sound-tile flex flex-col items-center space-y-3 w-28';
 
     const iconDiv = document.createElement('div');
     iconDiv.id = `icon-${sound.id}`;
-    iconDiv.className = 'sound-icon text-gray-400 cursor-pointer';
-    iconDiv.innerHTML = sound.icon || ''; // SVG inline từ Admin
+    iconDiv.className = 'sound-icon text-gray-300 cursor-pointer'; // gray-300 stroke
+    iconDiv.innerHTML = normalizeSvg(sound.icon || '');
+
 
     const nameP = document.createElement('p');
-    nameP.className = 'text-xs font-medium text-gray-300';
+    nameP.className = 'sound-name text-xs font-medium text-gray-300';
     nameP.textContent = sound.name || sound.id || 'Sound';
 
     const sliderWrapper = document.createElement('div');
@@ -138,20 +155,37 @@ document.addEventListener('DOMContentLoaded', async function () {
   natureSounds.forEach(s => createSoundControls(s, natureSoundsContainer));
   instrumentSounds.forEach(s => createSoundControls(s, instrumentSoundsContainer));
 
-  // tabs
+  /* ============================ MIXER TABS (NEW) =========================== */
+  // Initial colors
+  mixerNatureBtn?.classList.add('text-white');
+  mixerInstrumentBtn?.classList.add('text-gray-400');
+
   mixerNatureBtn?.addEventListener('click', () => {
-    natureSoundsContainer.classList.remove('hidden');
-    instrumentSoundsContainer.classList.add('hidden');
-    mixerNatureBtn.classList.add('active');
-    mixerInstrumentBtn.classList.remove('active');
+    natureSoundsContainer?.classList.remove('hidden');
+    instrumentSoundsContainer?.classList.add('hidden');
+
+    // Move pill to first tab
+    if (tabSlider) tabSlider.style.transform = 'translateX(0)';
+
+    // Colors
+    mixerNatureBtn.classList.remove('text-gray-400');
+    mixerNatureBtn.classList.add('text-white');
     mixerInstrumentBtn.classList.add('text-gray-400');
+    mixerInstrumentBtn.classList.remove('text-white');
   });
+
   mixerInstrumentBtn?.addEventListener('click', () => {
-    instrumentSoundsContainer.classList.remove('hidden');
-    natureSoundsContainer.classList.add('hidden');
-    mixerInstrumentBtn.classList.add('active');
-    mixerNatureBtn.classList.remove('active');
+    instrumentSoundsContainer?.classList.remove('hidden');
+    natureSoundsContainer?.classList.add('hidden');
+
+    // Move pill to second tab (accounts for 0.25rem inner gap)
+    if (tabSlider) tabSlider.style.transform = 'translateX(calc(100% + 0.25rem))';
+
+    // Colors
     mixerInstrumentBtn.classList.remove('text-gray-400');
+    mixerInstrumentBtn.classList.add('text-white');
+    mixerNatureBtn.classList.add('text-gray-400');
+    mixerNatureBtn.classList.remove('text-white');
   });
 
   /* =============================== TIMER =================================== */
@@ -264,7 +298,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     let r;
     do { r = Math.floor(Math.random() * playlist.length); } while (r === except);
     return r;
-    }
+  }
 
   function nextTrack() {
     if (!playlist.length) return;
@@ -341,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       one: `
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" 
           class="bi bi-repeat-1 text-green-500" viewBox="0 0 16 16">
-          <path d="M11 4.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V6H3.707l.147.146a.5.5 0 0 1-.708.708l-1-1a.5.5 0 0 1 0-.708l1-1a.5.5 0 0 1 .708.708L3.707 5H11z"/>
+          <path d="M11 4.5a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V6H3.707l.147.146a.5.5 0 1 1 .708-.708l-1-1a.5.5 0 0 1 0-.708l1-1a.5.5 0 0 1 .708.708L3.707 5H11z"/>
           <path d="M5 11.5a.5.5 0 0 1-.5-.5V7a.5.5 0 0 1 1 0v2.5h7.293l-.147-.146a.5.5 0 1 1 .708-.708l1 1a.5.5 0 0 1 0 .708l-1 1a.5.5 0 0 1-.708-.708l.147-.146H5z"/>
           <path d="M8.5 8.5v3h1v-4h-1.5v1h.5z"/>
         </svg>`
@@ -354,6 +388,39 @@ document.addEventListener('DOMContentLoaded', async function () {
       repeatBtn.innerHTML = icons.off;  repeatBtn.title = 'Repeat Off';
     }
   }
+
+  // ==== Collapse Left Panel (thumbnail-only) ====
+  const leftPanel = document.getElementById('left-panel');
+  const collapseBtn = document.getElementById('collapse-left-btn');
+
+  function applyCollapsedState(collapsed) {
+    if (!leftPanel || !collapseBtn) return;
+    leftPanel.setAttribute('data-collapsed', collapsed ? 'true' : 'false');
+    collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+
+  // restore saved state on load
+  try {
+    const saved = localStorage.getItem('gpLofiLeftCollapsed');
+    if (saved === '1') applyCollapsedState(true);
+  } catch (_) { /* ignore storage errors */ }
+
+  // toggle on click
+  collapseBtn?.addEventListener('click', () => {
+    if (!leftPanel) return;
+    const nowCollapsed = leftPanel.getAttribute('data-collapsed') === 'true' ? false : true;
+    applyCollapsedState(nowCollapsed);
+    try {
+      localStorage.setItem('gpLofiLeftCollapsed', nowCollapsed ? '1' : '0');
+    } catch (_) { /* ignore */ }
+  });
+
+  // (optional) keyboard shortcut: press "c" to toggle
+  document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'c' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      collapseBtn?.click();
+    }
+  });
 
   /* ================================ EVENTS ================================= */
   // Play controls
